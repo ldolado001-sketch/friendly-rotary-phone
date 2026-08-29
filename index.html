@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>수유게임 2 - 미니게임 아케이드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Jua', 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .game-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .game-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 게임 진행 중 스크롤 방지 및 화면 맞춤 스타일 */
+        body.game-playing {
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+        body.game-playing main {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            height: calc(100vh - 65px);
+            height: calc(100dvh - 65px);
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm py-3 px-6">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goToHome()">
+                <span class="text-3xl">🎮</span>
+                <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                    수유게임 2 <span class="text-sm font-normal text-slate-500">(Mini Arcade)</span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="home-btn" onclick="goToHome()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-1.5 rounded-full text-sm font-semibold transition">
+                    🏠 홈으로
+                </button>
+                <div class="text-xs sm:text-sm bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full font-semibold border border-indigo-100">
+                    ✨ 2D & 3D 아케이드
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8">
+        
+        <!-- Game Selection Menu (Grid of Game Buttons) -->
+        <section id="game-menu-section" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span>🕹️</span> 플레이할 게임 선택하기
+                </h3>
+                <span class="text-xs text-slate-500">총 7개 게임 이용 가능</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Select Button Card 1: Bomb Dodger -->
+                <div onclick="selectGame('bomb')" class="game-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm cursor-pointer flex items-center justify-between group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                            💣
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-indigo-600 transition">폭탄 피하기</h4>
+                            <p class="text-xs text-slate-500">좌우로 움직이며 폭탄을 피하세요!</p>
+                            <span class="inline-block mt-2 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md">
+                                최고 기록: <span id="menu-bomb-high">0</span>초
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center text-slate-400 transition">
+                        ▶
+                    </div>
+                </div>
+
+                <!-- Select Button Card 2: Whack-a-Mole -->
+                <div onclick="selectGame('mole')" class="game-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm cursor-pointer flex items-center justify-between group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                            🐹
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-amber-600 transition">두더지 잡기</h4>
+                            <p class="text-xs text-slate-500">튀어나오는 두더지를 쾅쾅!</p>
+                            <span class="inline-block mt-2 text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-md">
+                                최고 점수: <span id="menu-mole-high">0</span>점
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-amber-600 group-hover:text-white flex items-center justify-center text-slate-400 transition">
+                        ▶
+                    </div>
+                </div>
+
+                <!-- Select Button Card 3: 3D Jump Map -->
+                <div onclick="selectGame('jumpmap')" class="game-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm cursor-pointer flex items-center justify-between group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-cyan-100 text-cyan-600 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                            🏃‍♂️
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-cyan-600 transition">3D 점프맵</h4>
+                            <p class="text-xs text-slate-500">블록을 뛰어넘어 목적지까지 골인!</p>
+                            <span class="inline-block mt-2 text-xs font-semibold text-cyan-600 bg-cyan-50 px-2.5 py-0.5 rounded-md">
+                                최고 기록: <span id="menu-jump-high">0</span>초
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-cyan-600 group-hover:text-white flex items-center justify-center text-slate-400 transition">
+                        ▶
+                    </div>
+                </div>
+
+                <!-- Select Button Card 4: First Aid Game -->
+                <div onclick="selectGame('firstaid')" class="game-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm cursor-pointer flex items-center justify-between group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                            🩹
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-rose-600 transition">응급처치 마스터</h4>
+                            <p class="text-xs text-slate-500">소독약 ➔ 후시딘 ➔ 밴드로 상처 치료!</p>
+                            <span class="inline-block mt-2 text-xs font-semibold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-md">
+                                성공 횟수: <span id="menu-firstaid-high">0</span>회
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-rose-600 group-hover:text-white flex items-center justify-center text-slate-400 transition">
+                        ▶
+                    </div>
+                </div>
+
+                <!-- Select Button Card 5: Fishcake Tycoon -->
+                <div onclick="selectGame('tycoon')" class="game-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm cursor-pointer flex items-center justify-between group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                            🍢
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-orange-600 transition">어묵 포장마차 타이쿤</h4>
+                            <p class="text-xs text-slate-500">손님이 원하는 따끈한 어묵과 국물 판매!</p>
+                            <span class="inline-block mt-2 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-md">
+                                최고 매출: <span id="menu-tycoon-high">0</span>원
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-orange-600 group-hover:text-white flex items-center justify-center text-slate-400 transition">
+                        ▶
+                    </div>
+                </div>
+
+                <!-- Select Button Card 6: Memory Card Match -->
+                <div onclick="selectGame('memory')" class="game-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm cursor-pointer flex items-center justify-between group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                            🃏
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-purple-600 transition">카드 짝 맞추기</h4>
+                            <p class="text-xs text-slate-500">기억력을 발휘해 동일한 카드의 짝을 맞추세요!</p>
+                            <span class="inline-block mt-2 text-xs font-semibold text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-md">
+                                최고 기록: <span id="menu-memory-high">0</span>초
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-purple-600 group-hover:text-white flex items-center justify-center text-slate-400 transition">
+                        ▶
+                    </div>
+                </div>
+
+                <!-- Select Button Card 7: Speed 1 to 25 -->
+                <div onclick="selectGame('speed25')" class="game-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm cursor-pointer flex items-center justify-between group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                            ⚡
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-emerald-600 transition">스피드 1to25</h4>
+                            <p class="text-xs text-slate-500">1부터 25까지 순서대로 최대한 빠르게 터치!</p>
+                            <span class="inline-block mt-2 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md">
+                                최고 기록: <span id="menu-speed25-high">0</span>초
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center text-slate-400 transition">
+                        ▶
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game 1 Container: 폭탄 피하기 -->
+        <section id="game-bomb-container" class="hidden game-card bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm h-full flex flex-col justify-between min-h-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 pb-2 border-b border-slate-100 gap-1 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>💣</span> 폭탄 피하기 (Bomb Dodger)
+                    </h3>
+                    <p class="text-xs text-slate-500">좌우 방향키 또는 터치/클릭으로 폭탄을 피하며 오래 버티세요!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs sm:text-sm font-semibold bg-slate-100 px-3 py-1 rounded-xl text-slate-700">
+                        최고 기록: <span id="bomb-high-score" class="text-indigo-600 font-bold">0</span>초
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Canvas Container -->
+            <div class="relative w-full flex-1 min-h-0 bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center">
+                <canvas id="bomb-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+                
+                <!-- Overlay Menu -->
+                <div id="bomb-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 text-center">
+                    <h4 id="bomb-overlay-title" class="text-2xl font-bold mb-2">폭탄 피하기</h4>
+                    <p id="bomb-overlay-desc" class="text-slate-300 text-sm mb-6 max-w-xs">떨어지는 폭탄을 요리조리 피해 생존하세요!</p>
+                    <button id="bomb-start-btn" class="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition transform active:scale-95">
+                        게임 시작 (Space)
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-slate-400 px-1 flex-shrink-0">
+                <span>조작: 좌우 방향키 / 마우스 드래그 / 터치 이동</span>
+                <span id="bomb-current-score">생존 시간: 0.0초</span>
+            </div>
+        </section>
+
+        <!-- Game 2 Container: 두더지 잡기 -->
+        <section id="game-mole-container" class="hidden game-card bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm h-full flex flex-col justify-between min-h-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 pb-2 border-b border-slate-100 gap-1 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🐹</span> 두더지 잡기 (Whack-a-Mole)
+                    </h3>
+                    <p class="text-xs text-slate-500">튀어나오는 두더지를 30초 안에 최대한 많이 잡으세요!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs sm:text-sm font-semibold bg-slate-100 px-3 py-1 rounded-xl text-slate-700">
+                        최고 점수: <span id="mole-high-score" class="text-amber-600 font-bold">0</span>점
+                    </div>
+                </div>
+            </div>
+
+            <!-- Whack-a-Mole Area -->
+            <div class="relative w-full flex-1 min-h-0 bg-emerald-800 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center p-3">
+                <div class="absolute top-2 left-3 right-3 flex justify-between text-white font-bold text-xs sm:text-sm bg-emerald-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl z-10">
+                    <span id="mole-time">제한시간: 30초</span>
+                    <span id="mole-score">점수: 0점</span>
+                </div>
+
+                <!-- 3x3 Grid -->
+                <div class="grid grid-cols-3 gap-2 sm:gap-3 w-full max-w-xs sm:max-w-sm mt-6 flex-1 max-h-[340px] items-center">
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                    <div class="mole-hole relative w-full h-full max-h-[100px] aspect-square bg-emerald-950 rounded-2xl overflow-hidden cursor-pointer shadow-inner border-4 border-emerald-900 mx-auto">
+                        <div class="mole absolute inset-x-2 bottom-0 top-2 bg-amber-700 rounded-t-full flex flex-col items-center justify-start pt-2 transition-transform duration-150 transform translate-y-full select-none">
+                            <span class="text-xl sm:text-2xl">🐹</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overlay Menu -->
+                <div id="mole-overlay" class="absolute inset-0 bg-emerald-950/85 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 text-center z-20">
+                    <h4 id="mole-overlay-title" class="text-2xl font-bold mb-2">두더지 잡기</h4>
+                    <p id="mole-overlay-desc" class="text-emerald-200 text-sm mb-6 max-w-xs">튀어나오는 두더지를 터치하여 점수를 얻으세요!</p>
+                    <button id="mole-start-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition transform active:scale-95">
+                        게임 시작 (Space)
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-slate-400 px-1 flex-shrink-0">
+                <span>조작: 터치 또는 클릭</span>
+                <span>마리당 10점 획득</span>
+            </div>
+        </section>
+
+        <!-- Game 3 Container: 3D 점프맵 -->
+        <section id="game-jump-container" class="hidden game-card bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm h-full flex flex-col justify-between min-h-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 pb-2 border-b border-slate-100 gap-1 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🏃‍♂️</span> 3D 점프맵 (3D Parkour)
+                    </h3>
+                    <p class="text-xs text-slate-500">W/A/S/D 또는 방향키로 이동하고 스페이스바 또는 화면 터치로 점프하세요!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs sm:text-sm font-semibold bg-slate-100 px-3 py-1 rounded-xl text-slate-700">
+                        최고 기록: <span id="jump-high-score" class="text-cyan-600 font-bold">0</span>초
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3D Canvas Container -->
+            <div class="relative w-full flex-1 min-h-0 bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center">
+                <canvas id="jump-canvas" class="w-full h-full block"></canvas>
+                
+                <!-- On-screen mobile controls for 3D game -->
+                <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center pointer-events-none">
+                    <div class="flex gap-1.5 pointer-events-auto">
+                        <button id="ctrl-left" class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 active:bg-white/40 backdrop-blur-md rounded-2xl text-white text-lg sm:text-xl font-bold flex items-center justify-center shadow">◀</button>
+                        <button id="ctrl-forward" class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 active:bg-white/40 backdrop-blur-md rounded-2xl text-white text-lg sm:text-xl font-bold flex items-center justify-center shadow">▲</button>
+                        <button id="ctrl-back" class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 active:bg-white/40 backdrop-blur-md rounded-2xl text-white text-lg sm:text-xl font-bold flex items-center justify-center shadow">▼</button>
+                        <button id="ctrl-right" class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 active:bg-white/40 backdrop-blur-md rounded-2xl text-white text-lg sm:text-xl font-bold flex items-center justify-center shadow">▶</button>
+                    </div>
+                    <div class="pointer-events-auto">
+                        <button id="ctrl-jump" class="px-4 sm:px-5 h-10 sm:h-12 bg-cyan-500/80 active:bg-cyan-600 backdrop-blur-md rounded-2xl text-white text-xs sm:text-sm font-bold shadow">점프 🚀</button>
+                    </div>
+                </div>
+
+                <!-- Overlay Menu -->
+                <div id="jump-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 text-center z-20">
+                    <h4 id="jump-overlay-title" class="text-2xl font-bold mb-2">3D 점프맵</h4>
+                    <p id="jump-overlay-desc" class="text-slate-300 text-sm mb-6 max-w-xs">블록을 건너뛰어 초록색 골인 지점에 도달하세요!</p>
+                    <button id="jump-start-btn" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition transform active:scale-95">
+                        게임 시작 (Space)
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-slate-400 px-1 flex-shrink-0">
+                <span>조작: W, A, S, D 또는 방향키 / 스페이스바(점프)</span>
+                <span id="jump-current-score">기록: 0.0초</span>
+            </div>
+        </section>
+
+        <!-- Game 4 Container: 응급처치 게임 -->
+        <section id="game-firstaid-container" class="hidden game-card bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm h-full flex flex-col justify-between min-h-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 pb-2 border-b border-slate-100 gap-1 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🩹</span> 응급처치 마스터 (First Aid Master)
+                    </h3>
+                    <p class="text-xs text-slate-500">올바른 순서대로 상처 치료 도구를 클릭하세요!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs sm:text-sm font-semibold bg-slate-100 px-3 py-1 rounded-xl text-slate-700">
+                        성공 횟수: <span id="firstaid-high-score" class="text-rose-600 font-bold">0</span>회
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative w-full flex-1 min-h-0 bg-rose-50 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-between p-4 border-2 border-rose-100">
+                <div class="w-full text-center bg-white/80 backdrop-blur-sm p-3 rounded-xl shadow-sm border border-rose-100 mb-2">
+                    <div id="treatment-step-desc" class="text-sm sm:text-base font-bold text-rose-700">
+                        1단계: 소독약(🧴)으로 상처를 깨끗이 소독해주세요!
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1">
+                        진행상황: <span id="treatment-progress" class="font-bold text-rose-600">0</span> / 3 단계
+                    </div>
+                </div>
+
+                <div class="relative w-48 h-48 sm:w-56 sm:h-56 my-auto flex items-center justify-center bg-rose-100/60 rounded-full border-4 border-rose-200">
+                    <div class="text-7xl sm:text-8xl select-none">💪</div>
+                    <div id="layer-wound" class="absolute text-3xl sm:text-4xl animate-pulse">🩸</div>
+                    <div id="layer-antiseptic" class="hidden absolute inset-0 bg-sky-400/20 rounded-full flex items-center justify-center text-4xl">✨</div>
+                    <div id="layer-ointment" class="hidden absolute text-3xl sm:text-4xl">💊</div>
+                    <div id="layer-bandage" class="hidden absolute text-4xl sm:text-5xl">🩹</div>
+                </div>
+
+                <div class="w-full grid grid-cols-3 gap-2 sm:gap-3 mt-2">
+                    <button onclick="useTool('antiseptic')" class="bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-500 hover:to-sky-700 text-white font-bold py-3 px-2 rounded-2xl shadow active:scale-95 flex flex-col items-center gap-1 transition">
+                        <span class="text-2xl sm:text-3xl">🧴</span>
+                        <span class="text-xs sm:text-sm">1. 소독약</span>
+                    </button>
+                    <button onclick="useTool('ointment')" class="bg-gradient-to-b from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white font-bold py-3 px-2 rounded-2xl shadow active:scale-95 flex flex-col items-center gap-1 transition">
+                        <span class="text-2xl sm:text-3xl">💊</span>
+                        <span class="text-xs sm:text-sm">2. 후시딘</span>
+                    </button>
+                    <button onclick="useTool('bandage')" class="bg-gradient-to-b from-rose-400 to-rose-600 hover:from-rose-500 hover:to-rose-700 text-white font-bold py-3 px-2 rounded-2xl shadow active:scale-95 flex flex-col items-center gap-1 transition">
+                        <span class="text-2xl sm:text-3xl">🩹</span>
+                        <span class="text-xs sm:text-sm">3. 밴드</span>
+                    </button>
+                </div>
+
+                <div id="firstaid-overlay" class="absolute inset-0 bg-rose-950/85 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 text-center z-20">
+                    <h4 id="firstaid-overlay-title" class="text-2xl font-bold mb-2">응급처치 마스터</h4>
+                    <p id="firstaid-overlay-desc" class="text-rose-200 text-sm mb-6 max-w-xs">올바른 의료 도구 순서(소독약 ➔ 후시딘 ➔ 밴드)를 맞춰 환자를 치료하세요!</p>
+                    <button id="firstaid-start-btn" class="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition transform active:scale-95">
+                        치료 시작하기 (Space)
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-slate-400 px-1 flex-shrink-0">
+                <span>조작: 도구버튼 터치 또는 클릭</span>
+                <span>순서: 소독약 ➔ 후시딘 ➔ 밴드</span>
+            </div>
+        </section>
+
+        <!-- Game 5 Container: 길거리 어묵 포장마차 타이쿤 -->
+        <section id="game-tycoon-container" class="hidden game-card bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm h-full flex flex-col justify-between min-h-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 pb-2 border-b border-slate-100 gap-1 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🍢</span> 길거리 어묵 포장마차 타이쿤
+                    </h3>
+                    <p class="text-xs text-slate-500">손님이 주문한 음식을 클릭하여 빠르게 손님에게 전달하세요!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs sm:text-sm font-semibold bg-slate-100 px-3 py-1 rounded-xl text-slate-700">
+                        최고 매출: <span id="tycoon-high-score" class="text-orange-600 font-bold">0</span>원
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative w-full flex-1 min-h-0 bg-amber-900/90 rounded-2xl overflow-hidden shadow-inner flex flex-col justify-between p-3 sm:p-4 border-4 border-amber-800">
+                <div class="w-full flex justify-between items-center bg-black/40 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-bold text-xs sm:text-sm flex-shrink-0">
+                    <span id="tycoon-timer" class="text-amber-300">⏳ 남은 시간: 60초</span>
+                    <span id="tycoon-sales" class="text-emerald-400">💵 오늘 매출: 0원</span>
+                </div>
+
+                <div class="flex-1 my-2 flex items-center justify-center gap-4 sm:gap-8 px-2 overflow-x-auto min-h-0">
+                    <div id="customer-slot-0" class="flex flex-col items-center justify-end h-full max-w-[150px] sm:max-w-[180px] w-1/2 opacity-0 transition-opacity">
+                        <div class="bg-white text-slate-800 p-2 sm:p-2.5 rounded-2xl shadow-lg border-2 border-amber-400 mb-1 text-center relative w-full">
+                            <span class="text-xs font-bold block text-slate-500">주문</span>
+                            <div id="customer-0-order" class="text-sm sm:text-base font-bold text-orange-600 my-0.5">🍢 어묵꼬치</div>
+                            <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
+                                <div id="customer-0-patience" class="bg-emerald-500 h-full w-full transition-all duration-200"></div>
+                            </div>
+                        </div>
+                        <div id="customer-0-avatar" class="text-4xl sm:text-5xl cursor-pointer hover:scale-105 transition" onclick="serveCustomer(0)">
+                            🧑‍💼
+                        </div>
+                    </div>
+
+                    <div id="customer-slot-1" class="flex flex-col items-center justify-end h-full max-w-[150px] sm:max-w-[180px] w-1/2 opacity-0 transition-opacity">
+                        <div class="bg-white text-slate-800 p-2 sm:p-2.5 rounded-2xl shadow-lg border-2 border-amber-400 mb-1 text-center relative w-full">
+                            <span class="text-xs font-bold block text-slate-500">주문</span>
+                            <div id="customer-1-order" class="text-sm sm:text-base font-bold text-orange-600 my-0.5">🥣 따끈국물</div>
+                            <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
+                                <div id="customer-1-patience" class="bg-emerald-500 h-full w-full transition-all duration-200"></div>
+                            </div>
+                        </div>
+                        <div id="customer-1-avatar" class="text-4xl sm:text-5xl cursor-pointer hover:scale-105 transition" onclick="serveCustomer(1)">
+                            👩‍🌾
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-amber-950 p-2 sm:p-3 rounded-xl border-2 border-amber-700 flex flex-col gap-2 flex-shrink-0">
+                    <div class="text-xs text-amber-200 font-bold text-center">조리대 (음식을 클릭하여 손님에게 전달하세요!)</div>
+                    <div class="grid grid-cols-4 gap-1.5 sm:gap-2">
+                        <button onclick="prepareAndServe('어묵꼬치')" class="bg-gradient-to-b from-amber-500 to-amber-700 hover:from-amber-400 hover:to-amber-600 text-white font-bold py-2 px-1 rounded-xl shadow active:scale-95 flex flex-col items-center justify-center">
+                            <span class="text-xl sm:text-2xl">🍢</span>
+                            <span class="text-[10px] sm:text-xs">어묵꼬치</span>
+                            <span class="text-[9px] text-amber-200">1,000원</span>
+                        </button>
+                        <button onclick="prepareAndServe('따끈국물')" class="bg-gradient-to-b from-sky-500 to-sky-700 hover:from-sky-400 hover:to-sky-600 text-white font-bold py-2 px-1 rounded-xl shadow active:scale-95 flex flex-col items-center justify-center">
+                            <span class="text-xl sm:text-2xl">🥣</span>
+                            <span class="text-[10px] sm:text-xs">따끈국물</span>
+                            <span class="text-[9px] text-sky-200">500원</span>
+                        </button>
+                        <button onclick="prepareAndServe('물떡꼬치')" class="bg-gradient-to-b from-stone-400 to-stone-600 hover:from-stone-300 hover:to-stone-500 text-white font-bold py-2 px-1 rounded-xl shadow active:scale-95 flex flex-col items-center justify-center">
+                            <span class="text-xl sm:text-2xl">🍡</span>
+                            <span class="text-[10px] sm:text-xs">물떡꼬치</span>
+                            <span class="text-[9px] text-stone-200">1,200원</span>
+                        </button>
+                        <button onclick="prepareAndServe('매콤떡볶이')" class="bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white font-bold py-2 px-1 rounded-xl shadow active:scale-95 flex flex-col items-center justify-center">
+                            <span class="text-xl sm:text-2xl">🌶️</span>
+                            <span class="text-[10px] sm:text-xs">매콤떡볶이</span>
+                            <span class="text-[9px] text-red-200">2,000원</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tycoon-overlay" class="absolute inset-0 bg-amber-950/90 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 text-center z-20">
+                    <h4 id="tycoon-overlay-title" class="text-2xl font-bold mb-2">길거리 어묵 포장마차 타이쿤</h4>
+                    <p id="tycoon-overlay-desc" class="text-amber-200 text-sm mb-6 max-w-xs">60초 동안 손님이 원하는 음식(어묵, 국물, 물떡, 떡볶이)을 빠르게 전달하여 최고의 매출을 달성하세요!</p>
+                    <button id="tycoon-start-btn" class="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition transform active:scale-95">
+                        장사 시작하기 (Space)
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-slate-400 px-1 flex-shrink-0">
+                <span>조작: 하단 요리 버튼 터치/클릭</span>
+                <span>스페이스바로 바로 다시하기 가능!</span>
+            </div>
+        </section>
+
+        <!-- Game 6 Container: 카드 짝 맞추기 -->
+        <section id="game-memory-container" class="hidden game-card bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm h-full flex flex-col justify-between min-h-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 pb-2 border-b border-slate-100 gap-1 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🃏</span> 카드 짝 맞추기 (Memory Card Match)
+                    </h3>
+                    <p class="text-xs text-slate-500">같은 모양의 그림 카드를 찾아 짝을 맞춰보세요!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs sm:text-sm font-semibold bg-slate-100 px-3 py-1 rounded-xl text-slate-700">
+                        최고 기록: <span id="memory-high-score" class="text-purple-600 font-bold">0</span>초
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative w-full flex-1 min-h-0 bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-between p-3 border-4 border-slate-800">
+                <div class="w-full flex justify-between items-center bg-slate-800/80 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-bold text-xs sm:text-sm flex-shrink-0 z-10">
+                    <span id="memory-timer" class="text-purple-300">⏱️ 진행 시간: 0.0초</span>
+                    <span id="memory-moves" class="text-amber-300">🎯 시도 횟수: 0회</span>
+                </div>
+
+                <div id="memory-grid" class="grid grid-cols-4 gap-2 sm:gap-3 w-full max-w-md my-auto flex-1 max-h-[360px] items-center py-2">
+                </div>
+
+                <div id="memory-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 text-center z-20">
+                    <h4 id="memory-overlay-title" class="text-2xl font-bold mb-2">카드 짝 맞추기</h4>
+                    <p id="memory-overlay-desc" class="text-slate-300 text-sm mb-6 max-w-xs">12장의 카드를 뒤집어 6개의 짝을 최대한 빠른 시간 내에 완성해보세요!</p>
+                    <button id="memory-start-btn" class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition transform active:scale-95">
+                        게임 시작 (Space)
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-slate-400 px-1 flex-shrink-0">
+                <span>조작: 카드 클릭 / 터치</span>
+                <span>총 6개 쌍 매칭</span>
+            </div>
+        </section>
+
+        <!-- Game 7 Container: 스피드 1to25 -->
+        <section id="game-speed25-container" class="hidden game-card bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm h-full flex flex-col justify-between min-h-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 pb-2 border-b border-slate-100 gap-1 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>⚡</span> 스피드 1to25 (Speed Touch)
+                    </h3>
+                    <p class="text-xs text-slate-500">1부터 25까지의 숫자를 순서대로 빠르게 터치하세요!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs sm:text-sm font-semibold bg-slate-100 px-3 py-1 rounded-xl text-slate-700">
+                        최고 기록: <span id="speed25-high-score" class="text-emerald-600 font-bold">0</span>초
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative w-full flex-1 min-h-0 bg-emerald-950 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-between p-3 border-4 border-emerald-900">
+                <div class="w-full flex justify-between items-center bg-emerald-900/80 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-bold text-xs sm:text-sm flex-shrink-0 z-10">
+                    <span id="speed25-target" class="text-amber-300">🎯 다음에 누를 숫자: 1</span>
+                    <span id="speed25-timer" class="text-emerald-300">⏱️ 경과 시간: 0.00초</span>
+                </div>
+
+                <div id="speed25-grid" class="grid grid-cols-5 gap-1.5 sm:gap-2.5 w-full max-w-sm my-auto flex-1 max-h-[350px] items-center py-2">
+                </div>
+
+                <div id="speed25-overlay" class="absolute inset-0 bg-emerald-950/90 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 text-center z-20">
+                    <h4 id="speed25-overlay-title" class="text-2xl font-bold mb-2">스피드 1to25</h4>
+                    <p id="speed25-overlay-desc" class="text-emerald-200 text-sm mb-6 max-w-xs">1부터 25까지의 숫자를 순서대로 눌러서 명예의 전당 최고 기록에 도전하세요!</p>
+                    <button id="speed25-start-btn" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition transform active:scale-95">
+                        도전 시작 (Space)
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-slate-400 px-1 flex-shrink-0">
+                <span>조작: 숫자 버튼 클릭 / 터치</span>
+                <span>정확하고 순발력 있게 터치!</span>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-auto bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 space-y-2">
+        <p>저작권은 마인펀(Minefun)에게 있습니다.</p>
+        <p>
+            <a href="https://www.minefun.com" target="_blank" class="text-indigo-600 hover:underline font-semibold">
+                🌐 마인펀 사이트로 이동
+            </a>
+        </p>
+        <p class="text-slate-400">© 2026 수유게임 2. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // --- Navigation / Routing ---
+        const gameMenuSection = document.getElementById('game-menu-section');
+        const gameBombContainer = document.getElementById('game-bomb-container');
+        const gameMoleContainer = document.getElementById('game-mole-container');
+        const gameJumpContainer = document.getElementById('game-jump-container');
+        const gameFirstAidContainer = document.getElementById('game-firstaid-container');
+        const gameTycoonContainer = document.getElementById('game-tycoon-container');
+        const gameMemoryContainer = document.getElementById('game-memory-container');
+        const gameSpeed25Container = document.getElementById('game-speed25-container');
+        const homeBtn = document.getElementById('home-btn');
+
+        const menuBombHigh = document.getElementById('menu-bomb-high');
+        const menuMoleHigh = document.getElementById('menu-mole-high');
+        const menuJumpHigh = document.getElementById('menu-jump-high');
+        const menuFirstAidHigh = document.getElementById('menu-firstaid-high');
+        const menuTycoonHigh = document.getElementById('menu-tycoon-high');
+        const menuMemoryHigh = document.getElementById('menu-memory-high');
+        const menuSpeed25High = document.getElementById('menu-speed25-high');
+
+        let bombHighScore = parseFloat(localStorage.getItem('suyu_bomb_high') || 0);
+        let moleHighScore = parseInt(localStorage.getItem('suyu_mole_high') || 0);
+        let jumpHighScore = parseFloat(localStorage.getItem('suyu_jump_high') || 0);
+        let firstAidHighScore = parseInt(localStorage.getItem('suyu_firstaid_high') || 0);
+        let tycoonHighScore = parseInt(localStorage.getItem('suyu_tycoon_high') || 0);
+        let memoryHighScore = parseFloat(localStorage.getItem('suyu_memory_high') || 0);
+        let speed25HighScore = parseFloat(localStorage.getItem('suyu_speed25_high') || 0);
+
+        function updateMenuScores() {
+            menuBombHigh.innerText = bombHighScore.toFixed(1);
+            menuMoleHigh.innerText = moleHighScore;
+            menuJumpHigh.innerText = jumpHighScore > 0 ? jumpHighScore.toFixed(1) : '0';
+            menuFirstAidHigh.innerText = firstAidHighScore;
+            if (menuTycoonHigh) menuTycoonHigh.innerText = tycoonHighScore.toLocaleString();
+            if (menuMemoryHigh) menuMemoryHigh.innerText = memoryHighScore > 0 ? memoryHighScore.toFixed(1) : '0';
+            if (menuSpeed25High) menuSpeed25High.innerText = speed25HighScore > 0 ? speed25HighScore.toFixed(2) : '0';
+        }
+        updateMenuScores();
+
+        // Prevent unwanted page scrolling with game keys (Space, Arrows)
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key) || e.code === 'Space') {
+                if (document.body.classList.contains('game-playing')) {
+                    e.preventDefault();
+                }
+            }
+
+            if (e.code === 'Space' || e.key === ' ') {
+                if (!gameBombContainer.classList.contains('hidden') && !bombOverlay.classList.contains('hidden')) {
+                    bombStartBtn.click();
+                } else if (!gameMoleContainer.classList.contains('hidden') && !moleOverlay.classList.contains('hidden')) {
+                    moleStartBtn.click();
+                } else if (!gameJumpContainer.classList.contains('hidden') && !jumpOverlay.classList.contains('hidden')) {
+                    jumpStartBtn.click();
+                } else if (!gameFirstAidContainer.classList.contains('hidden') && !firstAidOverlay.classList.contains('hidden')) {
+                    firstAidStartBtn.click();
+                } else if (gameTycoonContainer && !gameTycoonContainer.classList.contains('hidden') && !tycoonOverlay.classList.contains('hidden')) {
+                    tycoonStartBtn.click();
+                } else if (gameMemoryContainer && !gameMemoryContainer.classList.contains('hidden') && !memoryOverlay.classList.contains('hidden')) {
+                    memoryStartBtn.click();
+                } else if (gameSpeed25Container && !gameSpeed25Container.classList.contains('hidden') && !speed25Overlay.classList.contains('hidden')) {
+                    speed25StartBtn.click();
+                }
+            }
+        });
+
+        function selectGame(type) {
+            document.body.classList.add('game-playing');
+            const footerEl = document.querySelector('footer');
+            if (footerEl) footerEl.classList.add('hidden');
+
+            gameMenuSection.classList.add('hidden');
+            homeBtn.classList.remove('hidden');
+
+            if (type === 'bomb') {
+                gameBombContainer.classList.remove('hidden');
+                setTimeout(resizeBombCanvas, 50);
+            } else if (type === 'mole') {
+                gameMoleContainer.classList.remove('hidden');
+            } else if (type === 'jumpmap') {
+                gameJumpContainer.classList.remove('hidden');
+                initJumpGame();
+                setTimeout(() => {
+                    if (jumpCanvas && jumpCanvas.parentElement && camera && renderer) {
+                        const w = jumpCanvas.parentElement.clientWidth;
+                        const h = jumpCanvas.parentElement.clientHeight;
+                        camera.aspect = w / h;
+                        camera.updateProjectionMatrix();
+                        renderer.setSize(w, h);
+                    }
+                }, 50);
+            } else if (type === 'firstaid') {
+                gameFirstAidContainer.classList.remove('hidden');
+            } else if (type === 'tycoon') {
+                if (gameTycoonContainer) gameTycoonContainer.classList.remove('hidden');
+            } else if (type === 'memory') {
+                if (gameMemoryContainer) gameMemoryContainer.classList.remove('hidden');
+            } else if (type === 'speed25') {
+                if (gameSpeed25Container) gameSpeed25Container.classList.remove('hidden');
+            }
+        }
+
+        function goToHome() {
+            document.body.classList.remove('game-playing');
+            const footerEl = document.querySelector('footer');
+            if (footerEl) footerEl.classList.remove('hidden');
+
+            bombGameRunning = false;
+            if (bombIntervalId) clearInterval(bombIntervalId);
+
+            moleGameRunning = false;
+            if (moleTimer) clearInterval(moleTimer);
+            if (activeMoleTimer) clearTimeout(activeMoleTimer);
+            if (currentActiveHole !== -1) {
+                holes[currentActiveHole].querySelector('.mole').classList.add('translate-y-full');
+                currentActiveHole = -1;
+            }
+
+            jumpGameRunning = false;
+            firstAidGameRunning = false;
+            tycoonGameRunning = false;
+            memoryGameRunning = false;
+            speed25GameRunning = false;
+
+            if (tycoonTimer) clearInterval(tycoonTimer);
+            if (tycoonCustomerLoop) clearInterval(tycoonCustomerLoop);
+            if (memoryTimer) clearInterval(memoryTimer);
+            if (speed25Timer) clearInterval(speed25Timer);
+
+            // Reset overlays
+            bombOverlay.classList.remove('hidden');
+            bombOverlayTitle.innerText = "폭탄 피하기";
+            bombOverlayDesc.innerText = "떨어지는 폭탄을 요리조리 피해 생존하세요!";
+            bombStartBtn.innerText = "게임 시작 (Space)";
+
+            moleOverlay.classList.remove('hidden');
+            moleOverlayTitle.innerText = "두더지 잡기";
+            moleOverlayDesc.innerText = "나오는 두더지를 터치하거나 클릭하여 잡아보세요!";
+            moleStartBtn.innerText = "게임 시작 (Space)";
+
+            jumpOverlay.classList.remove('hidden');
+            jumpOverlayTitle.innerText = "3D 점프맵";
+            jumpOverlayDesc.innerText = "블록을 건너뛰어 초록색 골인 지점에 도달하세요!";
+            jumpStartBtn.innerText = "게임 시작 (Space)";
+
+            firstAidOverlay.classList.remove('hidden');
+            firstAidOverlayTitle.innerText = "응급처치 마스터";
+            firstAidOverlayDesc.innerText = "올바른 의료 도구 순서(소독약 ➔ 후시딘 ➔ 밴드)를 맞춰 환자를 치료하세요!";
+            firstAidStartBtn.innerText = "치료 시작하기 (Space)";
+
+            if (tycoonOverlay) {
+                tycoonOverlay.classList.remove('hidden');
+                tycoonOverlayTitle.innerText = "길거리 어묵 포장마차 타이쿤";
+                tycoonOverlayDesc.innerText = "60초 동안 손님이 원하는 음식(어묵, 국물, 물떡, 떡볶이)을 빠르게 전달하여 최고의 매출을 달성하세요!";
+                tycoonStartBtn.innerText = "장사 시작하기 (Space)";
+            }
+
+            if (memoryOverlay) {
+                memoryOverlay.classList.remove('hidden');
+                memoryOverlayTitle.innerText = "카드 짝 맞추기";
+                memoryOverlayDesc.innerText = "12장의 카드를 뒤집어 6개의 짝을 최대한 빠른 시간 내에 완성해보세요!";
+                memoryStartBtn.innerText = "게임 시작 (Space)";
+            }
+
+            if (speed25Overlay) {
+                speed25Overlay.classList.remove('hidden');
+                speed25OverlayTitle.innerText = "스피드 1to25";
+                speed25OverlayDesc.innerText = "1부터 25까지의 숫자를 순서대로 눌러서 명예의 전당 최고 기록에 도전하세요!";
+                speed25StartBtn.innerText = "도전 시작 (Space)";
+            }
+
+            // Hide games, show menu
+            gameBombContainer.classList.add('hidden');
+            gameMoleContainer.classList.add('hidden');
+            gameJumpContainer.classList.add('hidden');
+            gameFirstAidContainer.classList.add('hidden');
+            if (gameTycoonContainer) gameTycoonContainer.classList.add('hidden');
+            if (gameMemoryContainer) gameMemoryContainer.classList.add('hidden');
+            if (gameSpeed25Container) gameSpeed25Container.classList.add('hidden');
+            gameMenuSection.classList.remove('hidden');
+            homeBtn.classList.add('hidden');
+
+            // Refresh menu scores
+            bombHighScore = parseFloat(localStorage.getItem('suyu_bomb_high') || 0);
+            moleHighScore = parseInt(localStorage.getItem('suyu_mole_high') || 0);
+            jumpHighScore = parseFloat(localStorage.getItem('suyu_jump_high') || 0);
+            firstAidHighScore = parseInt(localStorage.getItem('suyu_firstaid_high') || 0);
+            tycoonHighScore = parseInt(localStorage.getItem('suyu_tycoon_high') || 0);
+            memoryHighScore = parseFloat(localStorage.getItem('suyu_memory_high') || 0);
+            speed25HighScore = parseFloat(localStorage.getItem('suyu_speed25_high') || 0);
+            updateMenuScores();
+        }
+
+        // --- GAME 1: 폭탄 피하기 (Bomb Dodger) ---
+        const bombCanvas = document.getElementById('bomb-canvas');
+        const bombCtx = bombCanvas.getContext('2d');
+        const bombStartBtn = document.getElementById('bomb-start-btn');
+        const bombOverlay = document.getElementById('bomb-overlay');
+        const bombOverlayTitle = document.getElementById('bomb-overlay-title');
+        const bombOverlayDesc = document.getElementById('bomb-overlay-desc');
+        const bombHighScoreEl = document.getElementById('bomb-high-score');
+        const bombCurrentScoreEl = document.getElementById('bomb-current-score');
+
+        bombHighScoreEl.innerText = bombHighScore.toFixed(1);
+
+        let bombGameRunning = false;
+        let bombStartTime = 0;
+        let bombIntervalId = null;
+        let bombs = [];
+        let player = { x: 0, y: 0, radius: 14, speed: 6, targetX: 0 };
+        let keys = { ArrowLeft: false, ArrowRight: false };
+
+        function resizeBombCanvas() {
+            const rect = bombCanvas.parentElement.getBoundingClientRect();
+            if (rect.width > 0) {
+                bombCanvas.width = rect.width;
+                bombCanvas.height = rect.height;
+            }
+            if (!bombGameRunning) {
+                player.x = bombCanvas.width / 2;
+                player.y = bombCanvas.height - 30;
+                player.targetX = player.x;
+            }
+        }
+        window.addEventListener('resize', resizeBombCanvas);
+
+        let isDragging = false;
+        bombCanvas.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            updatePlayerTarget(e);
+        });
+        window.addEventListener('pointermove', (e) => {
+            if (isDragging) updatePlayerTarget(e);
+        });
+        window.addEventListener('pointerup', () => { isDragging = false; });
+
+        function updatePlayerTarget(e) {
+            const rect = bombCanvas.getBoundingClientRect();
+            player.targetX = e.clientX - rect.left;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') keys.ArrowLeft = true;
+            if (e.key === 'ArrowRight') keys.ArrowRight = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') keys.ArrowLeft = false;
+            if (e.key === 'ArrowRight') keys.ArrowRight = false;
+        });
+
+        function startBombGame() {
+            bombGameRunning = true;
+            bombs = [];
+            bombStartTime = Date.now();
+            player.x = bombCanvas.width / 2;
+            player.y = bombCanvas.height - 30;
+            player.targetX = player.x;
+            bombOverlay.classList.add('hidden');
+
+            bombIntervalId = setInterval(() => {
+                if (!bombGameRunning) return;
+                const radius = Math.random() * 8 + 10;
+                bombs.push({
+                    x: Math.random() * (bombCanvas.width - radius * 2) + radius,
+                    y: -radius,
+                    radius: radius,
+                    speed: Math.random() * 3 + 3 + (Date.now() - bombStartTime) / 10000
+                });
+            }, 300);
+
+            requestAnimationFrame(updateBombGame);
+        }
+
+        function updateBombGame() {
+            if (!bombGameRunning) return;
+
+            if (keys.ArrowLeft) player.targetX -= player.speed * 1.5;
+            if (keys.ArrowRight) player.targetX += player.speed * 1.5;
+
+            player.x += (player.targetX - player.x) * 0.2;
+            player.x = Math.max(player.radius, Math.min(bombCanvas.width - player.radius, player.x));
+
+            bombCtx.clearRect(0, 0, bombCanvas.width, bombCanvas.height);
+
+            for (let i = bombs.length - 1; i >= 0; i--) {
+                let b = bombs[i];
+                b.y += b.speed;
+
+                bombCtx.beginPath();
+                bombCtx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                bombCtx.fillStyle = '#ef4444';
+                bombCtx.fill();
+                bombCtx.closePath();
+
+                bombCtx.fillStyle = '#fbbf24';
+                bombCtx.fillRect(b.x - 1, b.y - b.radius - 4, 2, 4);
+
+                const dx = player.x - b.x;
+                const dy = player.y - b.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < player.radius + b.radius) {
+                    endBombGame();
+                    return;
+                }
+
+                if (b.y > bombCanvas.height + b.radius) {
+                    bombs.splice(i, 1);
+                }
+            }
+
+            bombCtx.beginPath();
+            bombCtx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            bombCtx.fillStyle = '#6366f1';
+            bombCtx.fill();
+            bombCtx.lineWidth = 2;
+            bombCtx.strokeStyle = '#ffffff';
+            bombCtx.stroke();
+            bombCtx.closePath();
+
+            const survivalTime = (Date.now() - bombStartTime) / 1000;
+            bombCurrentScoreEl.innerText = `생존 시간: ${survivalTime.toFixed(1)}초`;
+
+            requestAnimationFrame(updateBombGame);
+        }
+
+        function endBombGame() {
+            bombGameRunning = false;
+            clearInterval(bombIntervalId);
+            const survivalTime = (Date.now() - bombStartTime) / 1000;
+
+            if (survivalTime > bombHighScore) {
+                bombHighScore = survivalTime;
+                localStorage.setItem('suyu_bomb_high', bombHighScore);
+                bombHighScoreEl.innerText = bombHighScore.toFixed(1);
+            }
+
+            bombOverlayTitle.innerText = "게임 오버!";
+            bombOverlayDesc.innerText = `생존 시간: ${survivalTime.toFixed(1)}초 (최고: ${bombHighScore.toFixed(1)}초)`;
+            bombStartBtn.innerText = "다시 도전하기 (Space)";
+            bombOverlay.classList.remove('hidden');
+        }
+
+        bombStartBtn.addEventListener('click', startBombGame);
+
+
+        // --- GAME 2: 두더지 잡기 (Whack-a-Mole) ---
+        const moleStartBtn = document.getElementById('mole-start-btn');
+        const moleOverlay = document.getElementById('mole-overlay');
+        const moleOverlayTitle = document.getElementById('mole-overlay-title');
+        const moleOverlayDesc = document.getElementById('mole-overlay-desc');
+        const moleHighScoreEl = document.getElementById('mole-high-score');
+        const moleScoreEl = document.getElementById('mole-score');
+        const moleTimeEl = document.getElementById('mole-time');
+        const holes = document.querySelectorAll('.mole-hole');
+
+        moleHighScoreEl.innerText = moleHighScore;
+
+        let moleGameRunning = false;
+        let moleScore = 0;
+        let timeLeft = 30;
+        let moleTimer = null;
+        let activeMoleTimer = null;
+        let currentActiveHole = -1;
+
+        function startMoleGame() {
+            moleGameRunning = true;
+            moleScore = 0;
+            timeLeft = 30;
+            moleScoreEl.innerText = `점수: ${moleScore}점`;
+            moleTimeEl.innerText = `제한시간: ${timeLeft}초`;
+            moleOverlay.classList.add('hidden');
+
+            moleTimer = setInterval(() => {
+                timeLeft--;
+                moleTimeEl.innerText = `제한시간: ${timeLeft}초`;
+                if (timeLeft <= 0) {
+                    endMoleGame();
+                }
+            }, 1000);
+
+            popRandomMole();
+        }
+
+        function popRandomMole() {
+            if (!moleGameRunning) return;
+
+            if (currentActiveHole !== -1) {
+                holes[currentActiveHole].querySelector('.mole').classList.add('translate-y-full');
+            }
+
+            let nextHole;
+            do {
+                nextHole = Math.floor(Math.random() * holes.length);
+            } while (nextHole === currentActiveHole);
+
+            currentActiveHole = nextHole;
+            const moleEl = holes[currentActiveHole].querySelector('.mole');
+            moleEl.classList.remove('translate-y-full');
+
+            const popDuration = Math.random() * 600 + 600;
+            activeMoleTimer = setTimeout(() => {
+                if (moleGameRunning) {
+                    popRandomMole();
+                }
+            }, popDuration);
+        }
+
+        holes.forEach((hole, index) => {
+            hole.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                if (!moleGameRunning) return;
+
+                if (index === currentActiveHole) {
+                    moleScore += 10;
+                    moleScoreEl.innerText = `점수: ${moleScore}점`;
+                    const moleEl = hole.querySelector('.mole');
+                    moleEl.classList.add('translate-y-full');
+                    currentActiveHole = -1;
+
+                    clearTimeout(activeMoleTimer);
+                    popRandomMole();
+                }
+            });
+        });
+
+        function endMoleGame() {
+            moleGameRunning = false;
+            clearInterval(moleTimer);
+            clearTimeout(activeMoleTimer);
+
+            if (currentActiveHole !== -1) {
+                holes[currentActiveHole].querySelector('.mole').classList.add('translate-y-full');
+                currentActiveHole = -1;
+            }
+
+            if (moleScore > moleHighScore) {
+                moleHighScore = moleScore;
+                localStorage.setItem('suyu_mole_high', moleHighScore);
+                moleHighScoreEl.innerText = moleHighScore;
+            }
+
+            moleOverlayTitle.innerText = "게임 종료!";
+            moleOverlayDesc.innerText = `획득 점수: ${moleScore}점 (최고: ${moleHighScore}점)`;
+            moleStartBtn.innerText = "다시 하기 (Space)";
+            moleOverlay.classList.remove('hidden');
+        }
+
+        moleStartBtn.addEventListener('click', startMoleGame);
+
+
+        // --- GAME 3: 3D 점프맵 (3D Parkour using Three.js) ---
+        const jumpCanvas = document.getElementById('jump-canvas');
+        const jumpStartBtn = document.getElementById('jump-start-btn');
+        const jumpOverlay = document.getElementById('jump-overlay');
+        const jumpOverlayTitle = document.getElementById('jump-overlay-title');
+        const jumpOverlayDesc = document.getElementById('jump-overlay-desc');
+        const jumpHighScoreEl = document.getElementById('jump-high-score');
+        const jumpCurrentScoreEl = document.getElementById('jump-current-score');
+
+        jumpHighScoreEl.innerText = jumpHighScore > 0 ? jumpHighScore.toFixed(1) : '0';
+
+        let jumpGameRunning = false;
+        let jumpStartTime = 0;
+        let scene, camera, renderer;
+        let playerMesh, platforms = [], goalMesh;
+        let playerVelocityY = 0;
+        let isGrounded = false;
+        let jumpKeys = { forward: false, backward: false, left: false, right: false };
+
+        function initJumpGame() {
+            if (scene) return;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+            const width = jumpCanvas.parentElement.clientWidth;
+            const height = jumpCanvas.parentElement.clientHeight;
+
+            camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: jumpCanvas, antialias: true });
+            renderer.setSize(width, height);
+            renderer.shadowMap.enabled = true;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const playerGeo = new THREE.BoxGeometry(0.8, 1.2, 0.8);
+            const playerMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3 });
+            playerMesh = new THREE.Mesh(playerGeo, playerMat);
+            playerMesh.castShadow = true;
+            scene.add(playerMesh);
+
+            buildJumpLevel();
+
+            window.addEventListener('resize', () => {
+                if (!jumpCanvas.parentElement) return;
+                const w = jumpCanvas.parentElement.clientWidth;
+                const h = jumpCanvas.parentElement.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (!jumpGameRunning) return;
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') jumpKeys.forward = true;
+                if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') jumpKeys.backward = true;
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') jumpKeys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') jumpKeys.right = true;
+                if ((e.key === ' ' || e.code === 'Space') && isGrounded) {
+                    playerVelocityY = 0.32;
+                    isGrounded = false;
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') jumpKeys.forward = false;
+                if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') jumpKeys.backward = false;
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') jumpKeys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') jumpKeys.right = false;
+            });
+
+            setupTouchControl('ctrl-forward', 'forward');
+            setupTouchControl('ctrl-back', 'backward');
+            setupTouchControl('ctrl-left', 'left');
+            setupTouchControl('ctrl-right', 'right');
+            
+            const jumpBtnCtrl = document.getElementById('ctrl-jump');
+            if (jumpBtnCtrl) {
+                jumpBtnCtrl.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    if (jumpGameRunning && isGrounded) {
+                        playerVelocityY = 0.32;
+                        isGrounded = false;
+                    }
+                });
+            }
+        }
+
+        function setupTouchControl(elementId, keyName) {
+            const btn = document.getElementById(elementId);
+            if (!btn) return;
+            btn.addEventListener('pointerdown', (e) => { e.preventDefault(); jumpKeys[keyName] = true; });
+            btn.addEventListener('pointerup', (e) => { e.preventDefault(); jumpKeys[keyName] = false; });
+            btn.addEventListener('pointerleave', (e) => { e.preventDefault(); jumpKeys[keyName] = false; });
+        }
+
+        function buildJumpLevel() {
+            platforms.forEach(p => scene.remove(p));
+            platforms = [];
+            if (goalMesh) scene.remove(goalMesh);
+
+            const startGeo = new THREE.BoxGeometry(4, 1, 4);
+            const startMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+            const startPlat = new THREE.Mesh(startGeo, startMat);
+            startPlat.position.set(0, -0.5, 0);
+            scene.add(startPlat);
+            platforms.push(startPlat);
+
+            let currentZ = -6;
+            let currentX = 0;
+            let currentY = 0;
+
+            for (let i = 0; i < 12; i++) {
+                const width = 3;
+                const height = 1;
+                const depth = 3;
+                
+                currentZ -= (Math.random() * 2 + 4);
+                currentX += (Math.random() * 4 - 2);
+                currentY += (Math.random() * 1.5 - 0.5);
+
+                const platGeo = new THREE.BoxGeometry(width, height, depth);
+                const platMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+                const plat = new THREE.Mesh(platGeo, platMat);
+                plat.position.set(currentX, currentY - 0.5, currentZ);
+                plat.receiveShadow = true;
+                scene.add(plat);
+                platforms.push(plat);
+            }
+
+            const goalGeo = new THREE.BoxGeometry(4, 1, 4);
+            const goalMat = new THREE.MeshStandardMaterial({ color: 0x22c55e });
+            goalMesh = new THREE.Mesh(goalGeo, goalMat);
+            goalMesh.position.set(currentX, currentY - 0.5, currentZ - 6);
+            scene.add(goalMesh);
+        }
+
+        function startJumpGame() {
+            buildJumpLevel();
+            jumpGameRunning = true;
+            jumpStartTime = Date.now();
+            playerMesh.position.set(0, 1, 0);
+            playerVelocityY = 0;
+            isGrounded = false;
+            jumpOverlay.classList.add('hidden');
+
+            animateJumpGame();
+        }
+
+        function animateJumpGame() {
+            if (!jumpGameRunning) return;
+
+            const speed = 0.20;
+            if (jumpKeys.forward) playerMesh.position.z -= speed;
+            if (jumpKeys.backward) playerMesh.position.z += speed;
+            if (jumpKeys.left) playerMesh.position.x -= speed;
+            if (jumpKeys.right) playerMesh.position.x += speed;
+
+            playerVelocityY -= 0.012;
+            playerMesh.position.y += playerVelocityY;
+
+            isGrounded = false;
+            const playerBox = new THREE.Box3().setFromObject(playerMesh);
+
+            for (let p of platforms) {
+                const pBox = new THREE.Box3().setFromObject(p);
+                if (playerBox.intersectsBox(pBox)) {
+                    if (playerVelocityY < 0 && playerMesh.position.y > p.position.y) {
+                        playerMesh.position.y = p.position.y + 1.1;
+                        playerVelocityY = 0;
+                        isGrounded = true;
+                    }
+                }
+            }
+
+            if (goalMesh) {
+                const goalBox = new THREE.Box3().setFromObject(goalMesh);
+                if (playerBox.intersectsBox(goalBox)) {
+                    endJumpGame(true);
+                    return;
+                }
+            }
+
+            if (playerMesh.position.y < -10) {
+                endJumpGame(false);
+                return;
+            }
+
+            camera.position.x = playerMesh.position.x;
+            camera.position.y = playerMesh.position.y + 5;
+            camera.position.z = playerMesh.position.z + 8;
+            camera.lookAt(playerMesh.position);
+
+            const elapsed = (Date.now() - jumpStartTime) / 1000;
+            jumpCurrentScoreEl.innerText = `기록: ${elapsed.toFixed(1)}초`;
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animateJumpGame);
+        }
+
+        function endJumpGame(success) {
+            jumpGameRunning = false;
+            const elapsed = (Date.now() - jumpStartTime) / 1000;
+
+            if (success) {
+                if (jumpHighScore === 0 || elapsed < jumpHighScore) {
+                    jumpHighScore = elapsed;
+                    localStorage.setItem('suyu_jump_high', jumpHighScore);
+                    jumpHighScoreEl.innerText = jumpHighScore.toFixed(1);
+                }
+                jumpOverlayTitle.innerText = "🎉 골인 성공!";
+                jumpOverlayDesc.innerText = `클리어 시간: ${elapsed.toFixed(1)}초 (최고: ${jumpHighScore.toFixed(1)}초)`;
+            } else {
+                jumpOverlayTitle.innerText = "떨어졌어요! 😢";
+                jumpOverlayDesc.innerText = "다시 도전해서 끝까지 완주해보세요!";
+            }
+            jumpStartBtn.innerText = "다시 하기 (Space)";
+            jumpOverlay.classList.remove('hidden');
+        }
+
+        jumpStartBtn.addEventListener('click', startJumpGame);
+
+
+        // --- GAME 4: 응급처치 마스터 (First Aid) ---
+        const firstAidStartBtn = document.getElementById('firstaid-start-btn');
+        const firstAidOverlay = document.getElementById('firstaid-overlay');
+        const firstAidOverlayTitle = document.getElementById('firstaid-overlay-title');
+        const firstAidOverlayDesc = document.getElementById('firstaid-overlay-desc');
+        const firstAidHighScoreEl = document.getElementById('firstaid-high-score');
+        const treatmentStepDesc = document.getElementById('treatment-step-desc');
+        const treatmentProgressEl = document.getElementById('treatment-progress');
+
+        const layerAntiseptic = document.getElementById('layer-antiseptic');
+        const layerOintment = document.getElementById('layer-ointment');
+        const layerBandage = document.getElementById('layer-bandage');
+
+        if (firstAidHighScoreEl) firstAidHighScoreEl.innerText = firstAidHighScore;
+
+        let firstAidGameRunning = false;
+        let currentStep = 0;
+
+        function startFirstAidGame() {
+            firstAidGameRunning = true;
+            currentStep = 0;
+            if (treatmentProgressEl) treatmentProgressEl.innerText = "0";
+            if (treatmentStepDesc) treatmentStepDesc.innerText = "1단계: 소독약(🧴)으로 상처를 깨끗이 소독해주세요!";
+            if (layerAntiseptic) layerAntiseptic.classList.add('hidden');
+            if (layerOintment) layerOintment.classList.add('hidden');
+            if (layerBandage) layerBandage.classList.add('hidden');
+            if (firstAidOverlay) firstAidOverlay.classList.add('hidden');
+        }
+
+        function useTool(toolType) {
+            if (!firstAidGameRunning) return;
+
+            if (currentStep === 0 && toolType === 'antiseptic') {
+                currentStep = 1;
+                if (treatmentProgressEl) treatmentProgressEl.innerText = "1";
+                if (treatmentStepDesc) treatmentStepDesc.innerText = "2단계: 후시딘(💊) 연고를 골고루 발라주세요!";
+                if (layerAntiseptic) layerAntiseptic.classList.remove('hidden');
+            } else if (currentStep === 1 && toolType === 'ointment') {
+                currentStep = 2;
+                if (treatmentProgressEl) treatmentProgressEl.innerText = "2";
+                if (treatmentStepDesc) treatmentStepDesc.innerText = "3단계: 밴드(🩹)를 붙여 상처를 보호하세요!";
+                if (layerOintment) layerOintment.classList.remove('hidden');
+            } else if (currentStep === 2 && toolType === 'bandage') {
+                currentStep = 3;
+                if (treatmentProgressEl) treatmentProgressEl.innerText = "3";
+                if (treatmentStepDesc) treatmentStepDesc.innerText = "🎉 완벽합니다! 상처 치료가 성공적으로 끝났어요!";
+                if (layerBandage) layerBandage.classList.remove('hidden');
+                endFirstAidGame(true);
+            } else {
+                if (treatmentStepDesc) treatmentStepDesc.innerText = "❌ 순서가 틀렸어요! (소독약 ➔ 후시딘 ➔ 밴드 순서)";
+                setTimeout(() => {
+                    if (firstAidGameRunning && treatmentStepDesc) {
+                        if (currentStep === 0) treatmentStepDesc.innerText = "1단계: 소독약(🧴)으로 상처를 깨끗이 소독해주세요!";
+                        if (currentStep === 1) treatmentStepDesc.innerText = "2단계: 후시딘(💊) 연고를 골고루 발라주세요!";
+                        if (currentStep === 2) treatmentStepDesc.innerText = "3단계: 밴드(🩹)를 붙여 상처를 보호하세요!";
+                    }
+                }, 1500);
+            }
+        }
+
+        function endFirstAidGame(success) {
+            firstAidGameRunning = false;
+            if (success) {
+                firstAidHighScore++;
+                localStorage.setItem('suyu_firstaid_high', firstAidHighScore);
+                if (firstAidHighScoreEl) firstAidHighScoreEl.innerText = firstAidHighScore;
+
+                if (firstAidOverlayTitle) firstAidOverlayTitle.innerText = "치료 완료! 🏆";
+                if (firstAidOverlayDesc) firstAidOverlayDesc.innerText = `총 성공 횟수: ${firstAidHighScore}회`;
+            } else {
+                if (firstAidOverlayTitle) firstAidOverlayTitle.innerText = "치료 실패";
+                if (firstAidOverlayDesc) firstAidOverlayDesc.innerText = "올바른 순서로 다시 도전해보세요!";
+            }
+            if (firstAidStartBtn) firstAidStartBtn.innerText = "다시 치료하기 (Space)";
+            if (firstAidOverlay) firstAidOverlay.classList.remove('hidden');
+        }
+
+        if (firstAidStartBtn) firstAidStartBtn.addEventListener('click', startFirstAidGame);
+
+        // --- GAME 5: 길거리 어묵 포장마차 타이쿤 ---
+        const tycoonStartBtn = document.getElementById('tycoon-start-btn');
+        const tycoonOverlay = document.getElementById('tycoon-overlay');
+        const tycoonOverlayTitle = document.getElementById('tycoon-overlay-title');
+        const tycoonOverlayDesc = document.getElementById('tycoon-overlay-desc');
+        const tycoonHighScoreEl = document.getElementById('tycoon-high-score');
+        const tycoonTimerEl = document.getElementById('tycoon-timer');
+        const tycoonSalesEl = document.getElementById('tycoon-sales');
+
+        if (tycoonHighScoreEl) tycoonHighScoreEl.innerText = tycoonHighScore.toLocaleString();
+
+        let tycoonGameRunning = false;
+        let tycoonTimeLeft = 60;
+        let tycoonSales = 0;
+        let tycoonTimer = null;
+        let tycoonCustomerLoop = null;
+
+        const foodItems = [
+            { name: '어묵꼬치', price: 1000, icon: '🍢' },
+            { name: '따끈국물', price: 500, icon: '🥣' },
+            { name: '물떡꼬치', price: 1200, icon: '🍡' },
+            { name: '매콤떡볶이', price: 2000, icon: '🌶️' }
+        ];
+
+        const customerAvatars = ['🧑‍💼', '👩‍🌾', '👧', '👨‍🍳', '👴', '👩‍💻', '👮‍♂️'];
+
+        let customers = [
+            { active: false, item: null, patience: 100, timer: null },
+            { active: false, item: null, patience: 100, timer: null }
+        ];
+
+        function startTycoonGame() {
+            tycoonGameRunning = true;
+            tycoonTimeLeft = 60;
+            tycoonSales = 0;
+            tycoonSalesEl.innerText = `💵 오늘 매출: 0원`;
+            tycoonTimerEl.innerText = `⏳ 남은 시간: 60초`;
+            tycoonOverlay.classList.add('hidden');
+
+            customers.forEach((c, idx) => clearCustomerSlot(idx));
+
+            tycoonTimer = setInterval(() => {
+                tycoonTimeLeft--;
+                tycoonTimerEl.innerText = `⏳ 남은 시간: ${tycoonTimeLeft}초`;
+                if (tycoonTimeLeft <= 0) {
+                    endTycoonGame();
+                }
+            }, 1000);
+
+            spawnCustomer(0);
+            setTimeout(() => { if (tycoonGameRunning) spawnCustomer(1); }, 1500);
+
+            tycoonCustomerLoop = setInterval(() => {
+                if (!tycoonGameRunning) return;
+                if (!customers[0].active) spawnCustomer(0);
+                if (!customers[1].active) spawnCustomer(1);
+            }, 2000);
+        }
+
+        function spawnCustomer(slotIdx) {
+            if (!tycoonGameRunning || customers[slotIdx].active) return;
+
+            const randomItem = foodItems[Math.floor(Math.random() * foodItems.length)];
+            const randomAvatar = customerAvatars[Math.floor(Math.random() * customerAvatars.length)];
+
+            customers[slotIdx] = {
+                active: true,
+                item: randomItem,
+                patience: 100,
+                timer: null
+            };
+
+            const slotEl = document.getElementById(`customer-slot-${slotIdx}`);
+            const orderEl = document.getElementById(`customer-${slotIdx}-order`);
+            const avatarEl = document.getElementById(`customer-${slotIdx}-avatar`);
+            const patienceEl = document.getElementById(`customer-${slotIdx}-patience`);
+
+            if (slotEl && orderEl && avatarEl && patienceEl) {
+                orderEl.innerText = `${randomItem.icon} ${randomItem.name}`;
+                avatarEl.innerText = randomAvatar;
+                patienceEl.style.width = '100%';
+                patienceEl.className = 'bg-emerald-500 h-full w-full transition-all duration-200';
+                slotEl.classList.remove('opacity-0');
+            }
+
+            customers[slotIdx].timer = setInterval(() => {
+                if (!tycoonGameRunning || !customers[slotIdx].active) {
+                    clearInterval(customers[slotIdx].timer);
+                    return;
+                }
+
+                customers[slotIdx].patience -= 5;
+                const p = customers[slotIdx].patience;
+
+                if (patienceEl) {
+                    patienceEl.style.width = `${p}%`;
+                    if (p < 30) {
+                        patienceEl.className = 'bg-red-500 h-full transition-all duration-200';
+                    } else if (p < 60) {
+                        patienceEl.className = 'bg-amber-500 h-full transition-all duration-200';
+                    }
+                }
+
+                if (p <= 0) {
+                    clearCustomerSlot(slotIdx);
+                }
+            }, 400);
+        }
+
+        function prepareAndServe(foodName) {
+            if (!tycoonGameRunning) return;
+
+            let served = false;
+            for (let i = 0; i < customers.length; i++) {
+                if (customers[i].active && customers[i].item && customers[i].item.name === foodName) {
+                    serveCustomer(i);
+                    served = true;
+                    break;
+                }
+            }
+        }
+
+        function serveCustomer(slotIdx) {
+            if (!tycoonGameRunning || !customers[slotIdx].active) return;
+
+            const earned = customers[slotIdx].item.price;
+            tycoonSales += earned;
+            tycoonSalesEl.innerText = `💵 오늘 매출: ${tycoonSales.toLocaleString()}원`;
+
+            const avatarEl = document.getElementById(`customer-${slotIdx}-avatar`);
+            if (avatarEl) {
+                avatarEl.innerText = '😊';
+            }
+
+            clearCustomerSlot(slotIdx);
+            setTimeout(() => {
+                if (tycoonGameRunning && !customers[slotIdx].active) {
+                    spawnCustomer(slotIdx);
+                }
+            }, 1200);
+        }
+
+        function clearCustomerSlot(slotIdx) {
+            if (customers[slotIdx].timer) clearInterval(customers[slotIdx].timer);
+            customers[slotIdx].active = false;
+            customers[slotIdx].item = null;
+
+            const slotEl = document.getElementById(`customer-slot-${slotIdx}`);
+            if (slotEl) slotEl.classList.add('opacity-0');
+        }
+
+        function endTycoonGame() {
+            tycoonGameRunning = false;
+            clearInterval(tycoonTimer);
+            clearInterval(tycoonCustomerLoop);
+            customers.forEach((c, idx) => clearCustomerSlot(idx));
+
+            if (tycoonSales > tycoonHighScore) {
+                tycoonHighScore = tycoonSales;
+                localStorage.setItem('suyu_tycoon_high', tycoonHighScore);
+                if (tycoonHighScoreEl) tycoonHighScoreEl.innerText = tycoonHighScore.toLocaleString();
+            }
+
+            if (tycoonOverlayTitle && tycoonOverlayDesc && tycoonStartBtn && tycoonOverlay) {
+                tycoonOverlayTitle.innerText = "장사 마감! 🏆";
+                tycoonOverlayDesc.innerText = `오늘의 최종 매출: ${tycoonSales.toLocaleString()}원 (최고: ${tycoonHighScore.toLocaleString()}원)`;
+                tycoonStartBtn.innerText = "다시 장사하기 (Space)";
+                tycoonOverlay.classList.remove('hidden');
+            }
+        }
+
+        if (tycoonStartBtn) tycoonStartBtn.addEventListener('click', startTycoonGame);
+
+        // --- GAME 6: 카드 짝 맞추기 (Memory Card Match) ---
+        const memoryStartBtn = document.getElementById('memory-start-btn');
+        const memoryOverlay = document.getElementById('memory-overlay');
+        const memoryOverlayTitle = document.getElementById('memory-overlay-title');
+        const memoryOverlayDesc = document.getElementById('memory-overlay-desc');
+        const memoryHighScoreEl = document.getElementById('memory-high-score');
+        const memoryTimerEl = document.getElementById('memory-timer');
+        const memoryMovesEl = document.getElementById('memory-moves');
+        const memoryGridEl = document.getElementById('memory-grid');
+
+        if (memoryHighScoreEl) memoryHighScoreEl.innerText = memoryHighScore > 0 ? memoryHighScore.toFixed(1) : '0';
+
+        let memoryGameRunning = false;
+        let memoryStartTime = 0;
+        let memoryTimer = null;
+        let memoryMoves = 0;
+        let matchedPairs = 0;
+        let flippedCards = [];
+        let canFlip = true;
+
+        const cardEmojis = ['🐱', '🐶', '🦊', '🐸', '🐼', '🐯'];
+
+        function startMemoryGame() {
+            memoryGameRunning = true;
+            memoryMoves = 0;
+            matchedPairs = 0;
+            flippedCards = [];
+            canFlip = true;
+            memoryMovesEl.innerText = `🎯 시도 횟수: 0회`;
+            memoryTimerEl.innerText = `⏱️ 진행 시간: 0.0초`;
+            memoryOverlay.classList.add('hidden');
+
+            memoryStartTime = Date.now();
+            if (memoryTimer) clearInterval(memoryTimer);
+            memoryTimer = setInterval(() => {
+                if (!memoryGameRunning) return;
+                const elapsed = (Date.now() - memoryStartTime) / 1000;
+                memoryTimerEl.innerText = `⏱️ 진행 시간: ${elapsed.toFixed(1)}초`;
+            }, 100);
+
+            const deck = [...cardEmojis, ...cardEmojis].sort(() => Math.random() - 0.5);
+
+            memoryGridEl.innerHTML = '';
+            deck.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.className = 'w-full aspect-[3/4] max-h-[100px] bg-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center cursor-pointer text-2xl sm:text-3xl transition-transform duration-300 shadow-md transform hover:scale-105 active:scale-95 select-none';
+                card.dataset.emoji = emoji;
+                card.dataset.index = index;
+                card.innerHTML = `<span class="hidden">${emoji}</span><span class="text-indigo-200 text-lg font-bold">❓</span>`;
+
+                card.addEventListener('click', () => handleCardClick(card));
+                memoryGridEl.appendChild(card);
+            });
+        }
+
+        function handleCardClick(card) {
+            if (!memoryGameRunning || !canFlip) return;
+            if (card.classList.contains('matched') || flippedCards.includes(card)) return;
+
+            card.className = 'w-full aspect-[3/4] max-h-[100px] bg-slate-100 border-2 border-purple-400 rounded-2xl flex items-center justify-center cursor-default text-2xl sm:text-3xl shadow-inner select-none transition-all';
+            card.innerHTML = card.dataset.emoji;
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                memoryMoves++;
+                memoryMovesEl.innerText = `🎯 시도 횟수: ${memoryMoves}회`;
+                canFlip = false;
+
+                const [card1, card2] = flippedCards;
+                if (card1.dataset.emoji === card2.dataset.emoji) {
+                    card1.classList.add('matched', 'border-emerald-500', 'bg-emerald-100');
+                    card2.classList.add('matched', 'border-emerald-500', 'bg-emerald-100');
+                    matchedPairs++;
+                    flippedCards = [];
+                    canFlip = true;
+
+                    if (matchedPairs === cardEmojis.length) {
+                        endMemoryGame();
+                    }
+                } else {
+                    setTimeout(() => {
+                        card1.className = 'w-full aspect-[3/4] max-h-[100px] bg-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center cursor-pointer text-2xl sm:text-3xl transition-transform duration-300 shadow-md transform hover:scale-105 active:scale-95 select-none';
+                        card1.innerHTML = `<span class="hidden">${card1.dataset.emoji}</span><span class="text-indigo-200 text-lg font-bold">❓</span>`;
+                        
+                        card2.className = 'w-full aspect-[3/4] max-h-[100px] bg-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center cursor-pointer text-2xl sm:text-3xl transition-transform duration-300 shadow-md transform hover:scale-105 active:scale-95 select-none';
+                        card2.innerHTML = `<span class="hidden">${card2.dataset.emoji}</span><span class="text-indigo-200 text-lg font-bold">❓</span>`;
+                        
+                        flippedCards = [];
+                        canFlip = true;
+                    }, 800);
+                }
+            }
+        }
+
+        function endMemoryGame() {
+            memoryGameRunning = false;
+            clearInterval(memoryTimer);
+            const elapsed = (Date.now() - memoryStartTime) / 1000;
+
+            if (memoryHighScore === 0 || elapsed < memoryHighScore) {
+                memoryHighScore = elapsed;
+                localStorage.setItem('suyu_memory_high', memoryHighScore);
+                if (memoryHighScoreEl) memoryHighScoreEl.innerText = memoryHighScore.toFixed(1);
+            }
+
+            memoryOverlayTitle.innerText = "🎉 클리어 축하합니다!";
+            memoryOverlayDesc.innerText = `완료 시간: ${elapsed.toFixed(1)}초 (시도 횟수: ${memoryMoves}회 / 최고: ${memoryHighScore.toFixed(1)}초)`;
+            memoryStartBtn.innerText = "다시 도전하기 (Space)";
+            memoryOverlay.classList.remove('hidden');
+        }
+
+        if (memoryStartBtn) memoryStartBtn.addEventListener('click', startMemoryGame);
+
+        // --- GAME 7: 스피드 1to25 (Speed 1 to 25 Touch) ---
+        const speed25StartBtn = document.getElementById('speed25-start-btn');
+        const speed25Overlay = document.getElementById('speed25-overlay');
+        const speed25OverlayTitle = document.getElementById('speed25-overlay-title');
+        const speed25OverlayDesc = document.getElementById('speed25-overlay-desc');
+        const speed25HighScoreEl = document.getElementById('speed25-high-score');
+        const speed25TimerEl = document.getElementById('speed25-timer');
+        const speed25TargetEl = document.getElementById('speed25-target');
+        const speed25GridEl = document.getElementById('speed25-grid');
+
+        if (speed25HighScoreEl) speed25HighScoreEl.innerText = speed25HighScore > 0 ? speed25HighScore.toFixed(2) : '0';
+
+        let speed25GameRunning = false;
+        let speed25StartTime = 0;
+        let speed25Timer = null;
+        let nextNumber = 1;
+
+        function startSpeed25Game() {
+            speed25GameRunning = true;
+            nextNumber = 1;
+            speed25TargetEl.innerText = `🎯 다음에 누를 숫자: 1`;
+            speed25TimerEl.innerText = `⏱️ 경과 시간: 0.00초`;
+            speed25Overlay.classList.add('hidden');
+
+            speed25StartTime = Date.now();
+            if (speed25Timer) clearInterval(speed25Timer);
+            speed25Timer = setInterval(() => {
+                if (!speed25GameRunning) return;
+                const elapsed = (Date.now() - speed25StartTime) / 1000;
+                speed25TimerEl.innerText = `⏱️ 경과 시간: ${elapsed.toFixed(2)}초`;
+            }, 30);
+
+            const nums = Array.from({ length: 25 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+
+            speed25GridEl.innerHTML = '';
+            nums.forEach(num => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full aspect-square max-h-[60px] bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-lg sm:text-xl rounded-2xl shadow active:scale-95 transition-all flex items-center justify-center border-2 border-emerald-400 select-none';
+                btn.innerText = num;
+
+                btn.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    if (!speed25GameRunning) return;
+
+                    if (num === nextNumber) {
+                        btn.className = 'w-full aspect-square max-h-[60px] bg-slate-800 text-slate-600 font-bold text-lg sm:text-xl rounded-2xl border-2 border-slate-700 opacity-40 cursor-default select-none';
+                        btn.innerText = '✓';
+                        nextNumber++;
+
+                        if (nextNumber > 25) {
+                            endSpeed25Game();
+                        } else {
+                            speed25TargetEl.innerText = `🎯 다음에 누를 숫자: ${nextNumber}`;
+                        }
+                    }
+                });
+
+                speed25GridEl.appendChild(btn);
+            });
+        }
+
+        function endSpeed25Game() {
+            speed25GameRunning = false;
+            clearInterval(speed25Timer);
+            const elapsed = (Date.now() - speed25StartTime) / 1000;
+
+            if (speed25HighScore === 0 || elapsed < speed25HighScore) {
+                speed25HighScore = elapsed;
+                localStorage.setItem('suyu_speed25_high', speed25HighScore);
+                if (speed25HighScoreEl) speed25HighScoreEl.innerText = speed25HighScore.toFixed(2);
+            }
+
+            speed25OverlayTitle.innerText = "⚡ 스피드 클리어!";
+            speed25OverlayDesc.innerText = `완료 기록: ${elapsed.toFixed(2)}초 (최고 기록: ${speed25HighScore.toFixed(2)}초)`;
+            speed25StartBtn.innerText = "다시 기록 측정 (Space)";
+            speed25Overlay.classList.remove('hidden');
+        }
+
+        if (speed25StartBtn) speed25StartBtn.addEventListener('click', startSpeed25Game);
+
+    </script>
+</body>
+</html>
